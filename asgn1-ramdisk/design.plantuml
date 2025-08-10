@@ -1,0 +1,32 @@
+@startuml
+title Ramdiskext: Write, Seek, and Read Sequence
+
+actor User
+participant "ramdiskext_write" as Write
+participant "ramdiskext_llseek" as Seek
+participant "ramdiskext_read" as Read
+participant "rd_ensure_capacity_locked" as EnsureCap
+participant "rd_get_page_locked" as GetPage
+
+User -> Write : write(fd, buf, count)
+Write -> EnsureCap : ensure enough pages
+EnsureCap --> Write : success/fail
+loop for each page
+    Write -> GetPage : get page by index
+    GetPage --> Write : rd_page*
+    Write -> Write : copy_from_user to page
+end
+Write --> User : bytes written
+
+User -> Seek : lseek(fd, offset, whence)
+Seek -> Seek : update file position
+Seek --> User : new offset
+
+User -> Read : read(fd, buf, count)
+loop for each page
+    Read -> GetPage : get page by index
+    GetPage --> Read : rd_page*
+    Read -> Read : copy_to_user from page
+end
+Read --> User : bytes read
+@enduml
