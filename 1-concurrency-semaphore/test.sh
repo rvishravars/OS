@@ -1,10 +1,10 @@
 #!/bin/sh
-# POSIX sh test for lab1_mutex{1,2,3}
+# POSIX sh test for lab1_semaphore{1,2,3}
 set -eu
 
-MOD1=lab1_mutex1
-MOD2=lab1_mutex2
-MOD3=lab1_mutex3
+MOD1=lab1_semaphore1
+MOD2=lab1_semaphore2
+MOD3=lab1_semaphore3
 
 log()  { printf "\n[*] %s\n" "$*"; }
 ok()   { printf "   [OK] %s\n" "$*"; }
@@ -35,14 +35,17 @@ safe_rmmod() {
 }
 
 show_logs() {
-  # Don’t fail if grep finds nothing
-  { dmesg | tail -n 120 | grep -E "lab1_mutex|mutex.*(busy|acquired|released)"; } || true
+  # Broaden match to both semaphore- and semaphore-based messages
+  {
+    dmesg | tail -n 200 | \
+    grep -E "lab1_(semaphore)|\b(semaphore)\b.*(busy|acquired|released|UNLOCKED|LOCKED)"
+  } || true
 }
 
 probe_proc_state() {
-  if [ -r /proc/my_mutex_state ]; then
-    log "Current /proc/my_mutex_state:"
-    cat /proc/my_mutex_state || true
+  if [ -r /proc/my_semaphore_state ]; then
+    log "Current /proc/my_semaphore_state:"
+    cat /proc/my_semaphore_state || true
   fi
 }
 
@@ -65,13 +68,13 @@ safe_rmmod "$MOD1"
 log "Step 1: Load exporter ($MOD1)…"
 try_insmod "$MOD1" || { echo "Could not load $MOD1"; exit 1; }
 
-log "Step 2: Load consumer ($MOD2) — should SUCCEED and hold the mutex…"
+log "Step 2: Load consumer ($MOD2) — should SUCCEED and hold the semaphore…"
 try_insmod "$MOD2" || true
 probe_proc_state
 show_logs
 
 log "Step 3: Try to load $MOD3 — should FAIL with -EBUSY…"
-try_insmod "$MOD3" || ok "$MOD3 correctly refused to load while mutex is held"
+try_insmod "$MOD3" || ok "$MOD3 correctly refused to load while semaphore is held"
 probe_proc_state
 show_logs
 
@@ -80,7 +83,7 @@ safe_rmmod "$MOD2"
 try_insmod "$MOD3" || { echo "Expected $MOD3 to load after $MOD2 unload"; exit 1; }
 
 log "Now $MOD2 should FAIL with -EBUSY…"
-try_insmod "$MOD2" || ok "$MOD2 refused to load while $MOD3 holds the mutex"
+try_insmod "$MOD2" || ok "$MOD2 refused to load while $MOD3 holds the semaphore"
 probe_proc_state
 show_logs
 

@@ -1,4 +1,4 @@
-obj-m	+= lab1_mutex1.o lab1_mutex2.o lab1_mutex3.o
+obj-m	+= lab1_semaphore1.o lab1_semaphore2.o lab1_semaphore3.o
 
 KDIR	:= /lib/modules/$(shell uname -r)/build
 PWD	:= $(shell pwd)
